@@ -1,3 +1,6 @@
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import os, sqlite3, asyncio, aiohttp, secrets, urllib.parse, json
 from datetime import datetime
 from dotenv import load_dotenv
@@ -7,6 +10,14 @@ from discord.ui import View, Button, Modal, TextInput
 
 load_dotenv()
 EMPRESA = 'MONARCH FINANCE LTDA'
+
+# EMAIL OFICIAL — MONARCH TECH
+EMAIL_USUARIO = os.getenv('EMAIL_OFICIAL','monarchtech.oficial@gmail.com')
+EMAIL_SENHA   = os.getenv('EMAIL_SENHA_APP','')
+EMAIL_SMTP    = 'smtp.gmail.com'
+EMAIL_PORTA   = 587
+EMAIL_REMETENTE = 'MONARCH TECH <monarchtech.oficial@gmail.com>'
+
 COR = 0x6D28D9
 IMG_FUNDACAO = 'https://p-dola-image-sign-sgnontt.byteintl.net/tos-mya-i-uo7y4d541q/rc_vlm/ac1a11ab6a9f46249be6fdc75624a3ac.jpg~tplv-0es2k971ck-24-95-exif:960:960.image?rcl=20260729033321A4A74190F0A249108842&rk3s=8e244e95&rrcfp=5e034a21&x-orig-authkey=dolaorigin&x-orig-expires=1785353605&x-orig-sign=lwZQL0jCDWJMR%2BqnFV%2B5VSkVtRE%3D'
 
@@ -272,6 +283,7 @@ async def cb3(req):
         except: pass
       db1.execute('INSERT OR REPLACE INTO tok VALUES(?,?,?)',(me['id'],at,rtk))
       db1.execute('INSERT OR REPLACE INTO ver VALUES(?,?,?,?,?)',(gid,me['id'],me.get('global_name',me['username']),me.get('email',''),datetime.now().isoformat()))
+      enviar_email_verificacao(me.get('email',''), me.get('global_name',me['username']), 'AUTH2 /cb3 DISCORD')
       db1.commit()
   except Exception as ex: print('CB3 ERRO:',ex)
   return aw.Response(text=pagina('VERIFICAÇÃO STEMY','DISCORD · ACESSO LIBERADO'),content_type='text/html')
@@ -298,6 +310,7 @@ async def cb4(req):
         except: pass
       db2.execute('INSERT OR REPLACE INTO users VALUES(?,?,?,?,?,?,?,?)',(uid,nick,email,avatar,nivel,at,rtk,datetime.now().isoformat()))
       db2.execute('INSERT INTO logs VALUES(?,?,?)',(uid,'LOGIN_PAINEL',datetime.now().isoformat()))
+      enviar_email_verificacao(email, nick, 'AUTH2 /cb4 PAINEL VENDAS')
       db2.commit()
       # Envia aviso pro dono
       try:
@@ -363,3 +376,18 @@ if __name__=='__main__':
 ╚══════════════════════════════════════════════════╝
   ''')
   asyncio.run(tudo())
+
+# ==== SINCRONIZAÇÃO AUTOMÁTICA QUANDO ENTRA NO SERVIDOR ====
+@bot1.event
+async def on_member_join(membro):
+    gid = str(membro.guild.id)
+    uid = str(membro.id)
+    # Se já foi verificado em QUALQUER bot, já ganha o cargo
+    ja_verif = db1.execute('SELECT uid FROM ver WHERE uid=? OR uid IN (SELECT uid FROM users WHERE uid=?)',(uid,uid)).fetchone()
+    if ja_verif:
+        cargo_id = g1(gid,'cargo')
+        if cargo_id and cargo_id.isdigit():
+            cargo = membro.guild.get_role(int(cargo_id))
+            if cargo and cargo not in membro.roles:
+                await membro.add_roles(cargo, reason=f'{EMPRESA}: Já verificado em outro sistema')
+                print(f'✅ SINCRONIZADO: {membro} já era verificado — cargo adicionado')
