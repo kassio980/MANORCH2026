@@ -1,123 +1,104 @@
 const express = require('express');
 const router = express.Router();
+const axios = require('axios');
 const db = require('../db');
 const crypto = require('crypto');
+const ASAAS = 'https://www.asaas.com/api/v3';
+const AKEY = () => process.env.ASAAS_CHAVE_MESTRE || db.cfg().chave_asaas_dono;
 
-router.use((req,res,next)=>{ if(!req.session.user) return res.redirect('/login'); next(); });
+router.get('/', (req, res) => res.render('loja/cliente-loja', {
+  titulo:'🏠 Loja',
+  prods: db.db.prepare('SELECT * FROM produtos WHERE ativo=1 ORDER BY ordem').all(),
+  carteira: db.minhaCarteiraBot(req.session.user.id),
+  licencas: db.minhasLicencas(req.session.user.id),
+  pedidos: db.meusPedidos(req.session.user.id).slice(0,5)
+}));
 
-// Home = Loja + SEU saldo de dono de bot
-router.get('/', (req, res) => {
-  const uid = req.session.user.id;
-  res.render('loja/cliente-loja', {
-    titulo:'🏠 MONARCH STORE',
-    prods: db.db.prepare('SELECT * FROM produtos WHERE ativo=1 ORDER BY ordem').all(),
-    minha_carteira: db.minhaCarteiraBot(uid) || {saldo:0},
-    minhas_licencas: db.minhasLicencas(uid),
-    cfg: db.cfg()
+// ✅ CALCULA EM TEMPO REAL (AJAX) — mexeu no slider já atualiza
+router.get('/membros/calc', (req, res) => {
+  res.json(db.calcMembros(+req.query.q, req.query.r==='1', req.query.p==='1'));
+});
+
+// ✅ TELA COMPRA MEMBROS COM SLIDER
+router.get('/membros', (req, res) => {
+  const c = db.cfg();
+  const qtd = Math.max(c.membros_min, Math.min(c.membros_max, +(req.query.qtd||20)));
+  const refil = req.query.refil==='1', prio = req.query.prio==='1';
+  res.render('loja/cliente-membros', {
+    titulo:'👥 Comprar Membros', c, qtd, refil, prio,
+    calc: db.calcMembros(qtd, refil, prio),
+    entrou: req.session.user.entrou_servidor===1,
+    convite: c.servidor_convite
   });
 });
 
-// ========== COMPRAR PRODUTO (regras de dinheiro automáticas) ==========
-router.post('/comprar/:produtoId', (req, res) => {
+// ✅ CRIA PEDIDO E GERA PIX
+router.post('/membros/comprar', async (req, res) => {
   const uid = req.session.user.id;
-  const prod = db.db.prepare('SELECT * FROM produtos WHERE id=? AND ativo=1').get(req.params.produtoId);
-  if(!prod) return res.redirect('/painel?erro=produto');
-  const cart = db.minhaCarteiraBot(uid) || {saldo:0};
+  const c = db.cfg();
+  const qtd = Math.max(c.membros_min, Math.min(c.membros_max, +req.body.qtd||20));
+  const refil = req.body.refil==='1'?1:0, prio = req.body.prio==='1'?1:0;
+  const calc = db.calcMembros(qtd, refil, prio);
+  const ref = `MEM-${Date.now()}-${crypto.randomBytes(2).toString('hex').toUpperCase()}`;
 
-  // 1. Venda do produto → 100% vai pra VOCÊ (dono plataforma), SEM TAXA
-  if(cart.saldo < prod.preco) return res.redirect('/painel?erro=saldo');
-  db.db.prepare('UPDATE carteira_dono_bot SET saldo=saldo-? WHERE usuario_id=?').run(prod.preco, uid);
-  db.movimentar({
-    tipo:'VENDA_PRODUTO', usuario_id:uid, valor:prod.preco, taxa_pct:0,
-    destinatario:'PLATAFORMA', referencia:prod.id,
-    descricao:`${req.session.user.username} comprou ${prod.nome}`
+  // Gera Pix Asaas
+  let pix = { cc:'', qr:'' };
+  try {
+    const r = await axios.post(`${ASAAS}/payments`, {
+      customer: process.env.ASAAS_CLIENTE_ID || 'cus_000000000',
+      billingType:'PIX', value: calc.total,
+      dueDate: new Date(Date.now()+86400000).toISOString().slice(0,10),
+      externalReference: ref, description: `${qtd} membros MONARCH`
+    }, {headers:{ access_token: AKEY() }});
+    pix = { cc: r.data.pixPayload?.payload||'', qr: r.data.pixPayload?.encodedImage||'' };
+  } catch(e){ console.log('ASAAS:',e.response?.data||''); }
+
+  const tid = db.db.prepare(`INSERT INTO transacoes
+    (tipo,usuario_id,valor,taxa,liquido,referencia,status,pix_copia_cola,pix_qr)
+    VALUES ('MEMBROS',?,?,?,?,?,?,?,?)`)
+    .run(uid, calc.total, calc.taxa, calc.liquido, ref, 'PENDENTE', pix.cc, pix.qr).lastInsertRowid;
+  const pid = db.db.prepare(`INSERT INTO pedidos_membros
+    (usuario_id,quantidade,refil,prioridade,valor_total,taxa_plataforma,liquido_dono,referencia,etapa,status)
+    VALUES (?,?,?,?,?,?,?,?,'pagamento','AGUARDANDO_PAGAMENTO')`)
+    .run(uid, qtd, refil, prio, calc.total, calc.taxa, calc.liquido, ref).lastInsertRowid;
+  db.db.prepare('UPDATE pedidos_membros SET transacao_id=? WHERE id=?').run(tid, pid);
+  res.redirect(`/painel/membros/pedido/${pid}`);
+});
+
+// ✅ TELA DO PEDIDO (JANELA FLUTUANTE PEDINDO ID)
+router.get('/membros/pedido/:id', (req, res) => {
+  const p = db.db.prepare(`SELECT p.*,t.pix_copia_cola,t.pix_qr,t.status AS status_pag
+    FROM pedidos_membros p LEFT JOIN transacoes t ON t.referencia=p.referencia
+    WHERE p.id=? AND p.usuario_id=?`).get(+req.params.id, req.session.user.id);
+  if(!p) return res.redirect('/painel/membros');
+  res.render('loja/cliente-membros-pedido', {
+    titulo:`Pedido #${p.id}`, p, c: db.cfg(),
+    entrou: req.session.user.entrou_servidor===1
   });
-
-  // 2. Cria licença + BOT JÁ INTEGRADO com a API comprada
-  const lid = `MNC-${crypto.randomInt(100000,999999)}`;
-  const chave = `mnc_live_${crypto.randomBytes(16).toString('hex')}`;
-  db.criarLicenca({id:lid, usuario_id:uid, produto_id:prod.id, chave_api:chave, validade:new Date(Date.now()+prod.dias_validade*86400000).toISOString()});
-  const botId = db.db.prepare('INSERT INTO bots (licenca_id,usuario_id,nome_bot,descricao) VALUES (?,?,?,?)')
-    .run(lid, uid, `MONARCH ${prod.tipo_bot}`, prod.descricao||'').lastInsertRowid;
-
-  // 3. Convite do bot automático
-  const invite = `https://discord.com/api/oauth2/authorize?client_id=SEU_CLIENT_ID&permissions=8&scope=bot%20applications.commands&guild_id=`;
-  db.db.prepare('UPDATE bots SET invite_link=? WHERE id=?').run(invite, botId);
-  res.redirect(`/painel/meu-bot/${botId}?nova=1`);
 });
 
-// ========== MEU BOT (configura nome, banner, logo, descrição, convidar pro servidor) ==========
-router.get('/meu-bot/:id', (req, res) => {
+// ✅ SALVA ID DISCORD E DISPARA MENSAGEM NO BOT
+router.post('/membros/pedido/:id/id', async (req, res) => {
   const uid = req.session.user.id;
-  const bot = db.db.prepare('SELECT b.*,l.chave_api,l.status,p.tipo_bot,p.nivel_api,p.tem_carteira_interna FROM bots b JOIN licencas l ON l.id=b.licenca_id JOIN produtos p ON p.id=l.produto_id WHERE b.id=? AND b.usuario_id=?').get(+req.params.id, uid);
-  if(!bot) return res.redirect('/painel/api');
-  res.render('loja/cliente-bot', {titulo:`🤖 ${bot.nome_bot}`, bot});
-});
-router.post('/meu-bot/:id/salvar', (req, res) => {
-  const b = req.body;
-  db.db.prepare('UPDATE bots SET nome_bot=?,banner=?,logo=?,descricao=?,token_discord=? WHERE id=? AND usuario_id=?')
-    .run(b.nome_bot,b.banner||'',b.logo||'',b.descricao||'',b.token_discord||'',+req.params.id,req.session.user.id);
+  const did = req.body.discord_id?.trim();
+  if(!did) return res.redirect('back');
+  db.db.prepare('UPDATE pedidos_membros SET id_discord_usuario=?, etapa=? WHERE id=? AND usuario_id=?')
+    .run(did, 'bot', +req.params.id, uid);
+  // Mensagem bot
+  try {
+    const BOT = process.env.DISCORD_BOT_TOKEN;
+    const INV = `https://discord.com/api/oauth2/authorize?client_id=${process.env.DISCORD_CLIENT_ID}&permissions=268435456&scope=bot%20applications.commands&guild_id=`;
+    if(BOT && process.env.CANAL_LOGS_ID){
+      const p = db.db.prepare('SELECT * FROM pedidos_membros WHERE id=?').get(+req.params.id);
+      await axios.post(`https://discord.com/api/channels/${process.env.CANAL_LOGS_ID}/messages`, {
+        content: `✅ **NOVO PEDIDO #${p.id}**\n👤 <@${did}>\n📦 **${p.quantidade} membros**\n💰 R$ ${p.valor_total.toFixed(2).replace('.',',')}\n⏰ ${new Date().toLocaleString('pt-BR')}\n${p.prioridade?'⚡ Prioridade':''} ${p.refil?'🔁 Refil':''}`,
+        components: [{type:1,components:[{type:2,style:5,label:'🤖 Me adicionar no servidor',url:INV}]}]
+      }, {headers:{Authorization:`Bot ${BOT}`}});
+    }
+  } catch(e){}
   res.redirect('back');
 });
 
-// ========== CARTEIRA DO DONO DE BOT (recebe vendas dos membros no bot dele) ==========
-router.get('/carteira', (req, res) => res.render('loja/cliente-carteira', {
-  titulo:'💰 Minha Carteira de Bot',
-  c: db.minhaCarteiraBot(req.session.user.id)||{saldo:0}, cfg: db.cfg()
-}));
-router.post('/carteira/depositar', (req, res) => {
-  const v=+req.body.valor, uid=req.session.user.id;
-  db.db.prepare('UPDATE carteira_dono_bot SET saldo=saldo+? WHERE usuario_id=?').run(v, uid);
-  res.redirect('/painel/carteira');
-});
-// ✅ SAQUE DONO DE BOT: COBRA TAXA 15% QUE VAI PRA VOCÊ
-router.post('/carteira/sacar', (req, res) => {
-  const v=+req.body.valor, uid=req.session.user.id, cfg=db.cfg();
-  const cart = db.minhaCarteiraBot(uid);
-  if(v<cfg.saque_min||v>cfg.saque_max) return res.redirect('/painel/carteira?erro=limite');
-  if(!cart || cart.saldo<v) return res.redirect('/painel/carteira?erro=saldo');
-  // Aplica regra: desconta do cliente, 15% vai pra plataforma, resto recebe
-  db.db.prepare('UPDATE carteira_dono_bot SET saldo=saldo-?,sacado=sacado+? WHERE usuario_id=?').run(v, +(v*(1-cfg.taxa_saque_membros/100)).toFixed(2), uid);
-  db.movimentar({
-    tipo:'SAQUE_DONO_BOT', usuario_id:uid, valor:v, taxa_pct:cfg.taxa_saque_membros,
-    destinatario:`DONO_BOT:${uid}`, descricao:`Saque dono bot - taxa ${cfg.taxa_saque_membros}% MONARCH`
-  });
-  res.redirect('/painel/carteira?ok=1');
-});
-
-// ========== ENDPOINTS INTERNOS DO BOT (carteira dos membros) ==========
-// ✅ REGRA: DONO DO BOT NUNCA MECHE NO SALDO DO MEMBRO — só o sistema
-router.post('/bot/:botId/membro/:discordId/depositar', (req, res) => {
-  const {valor} = req.body;
-  const bot = db.db.prepare('SELECT * FROM bots WHERE id=?').get(+req.params.botId);
-  if(!bot) return res.json({ok:false,erro:'bot'});
-  // Membro deposita → aumenta saldo DELE APENAS
-  db.db.prepare('INSERT INTO carteira_membro (bot_id,discord_usuario_id,nome,saldo) VALUES (?,?,?,?) ON CONFLICT DO UPDATE SET saldo=saldo+excluded.saldo')
-    .run(bot.id, req.params.discordId, req.body.nome||'Membro', +valor);
-  res.json({ok:true});
-});
-// Membro compra algo NO BOT → desconta DELE, líquido vai pro DONO DO BOT, 15% pra VOCÊ
-router.post('/bot/:botId/membro/:discordId/comprar', (req, res) => {
-  const {valor, descricao} = req.body;
-  const bot = db.db.prepare('SELECT * FROM bots WHERE id=?').get(+req.params.botId);
-  const m = db.carteiraMembro(bot.id, req.params.discordId);
-  if(!m || m.saldo < +valor) return res.json({ok:false,erro:'saldo'});
-  // 1. Desconta do membro
-  db.db.prepare('UPDATE carteira_membro SET saldo=saldo-? WHERE id=?').run(+valor, m.id);
-  // 2. Aplica regra: 15% pra VOCÊ, resto pro dono do bot
-  db.movimentar({
-    tipo:'VENDA_BOT_INTERNO', bot_id:bot.id, valor:+valor,
-    destinatario:`DONO_BOT:${bot.usuario_id}`, referencia:`BOT-${bot.id}`,
-    descricao: descricao||'Compra interna no bot'
-  });
-  res.json({ok:true});
-});
-
-// Outros
-router.get('/api', (req,res)=>res.render('loja/cliente-api',{titulo:'🔑 Minhas APIs', l:db.minhasLicencas(req.session.user.id)}));
-router.get('/plano', (req,res)=>res.render('loja/cliente-plano',{titulo:'📅 Meus Planos', l:db.minhasLicencas(req.session.user.id)}));
-router.get('/config', (req,res)=>res.render('loja/cliente-config',{titulo:'⚙️ Minhas Configs', u:db.db.prepare('SELECT * FROM usuarios WHERE id=?').get(req.session.user.id)}));
-router.post('/config/salvar-asaas', (req,res)=>{db.db.prepare('UPDATE usuarios SET chave_asaas=? WHERE id=?').run(req.body.chave_asaas||'',req.session.user.id);res.redirect('back');});
-router.get('/perfil', (req,res)=>res.render('loja/cliente-perfil',{titulo:'👤 Meu Perfil'}));
-router.get('/produtos', (req,res)=>res.redirect('/painel'));
+router.get('/api', (req,res)=>res.render('loja/cliente-api',{titulo:'🔑 APIs', l:db.minhasLicencas(req.session.user.id)}));
+router.get('/carteira', (req,res)=>res.render('loja/cliente-carteira',{titulo:'💰 Carteira', c:db.minhaCarteiraBot(req.session.user.id), cfg:db.cfg()}));
 module.exports = router;
