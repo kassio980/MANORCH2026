@@ -1,19 +1,11 @@
 {
-  "name": "monarch2026-premium",
-  "version": "2.0.0",
-  "description": "MONARCH2026© SaaS Premium — API • BOT • STORE • WALLET • FINANCE",
+  "name": "monarch-api-v8",
+  "version": "8.0.0",
+  "description": "MONARCH API V8 — Ecossistema Licencas, Bots, APIs — SÓ DISCORD",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
+  "scripts": { "start": "node server.js" },
   "dependencies": {
-    "axios": "^1.7.2",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "ejs": "^3.1.10",
-    "express": "^4.19.2",
-    "express-session": "^1.18.0"
+    "dotenv": "^16.4.0",
+    "express": "^4.19.0"
   }
 }
