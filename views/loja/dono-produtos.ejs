@@ -1,0 +1,106 @@
+<%- include('../partials/cabecalho') %>
+<%- include('../partials/topo-loja') %>
+<%- include('../partials/menu-dono') %>
+<main class="conteudo">
+  <h1><span class="grad">📦 Cadastrar / Editar Produtos</span></h1>
+  <p class="muted">Tudo que salvar aqui aparece automaticamente na loja do cliente</p>
+
+  <!-- FORMULÁRIO NOVO PRODUTO -->
+  <div class="card-premium">
+    <h3>+ Novo Produto</h3>
+    <form method="POST" action="/dono/produtos/salvar" class="grid-form">
+      <input name="id" required class="input" placeholder="* ID único (ex: API_BASICO)">
+      <input name="nome" required class="input" placeholder="* Nome visível (ex: API PREMIUM)">
+      
+      <label class="lbl">🤖 Tipo do BOT
+        <select name="tipo_bot" required class="input">
+          <option value="BASICO">BÁSICO</option>
+          <option value="INTERMEDIARIO">INTERMEDIÁRIO (já vem com carteira interna)</option>
+          <option value="VIP">VIP (já vem com carteira interna)</option>
+          <option value="PREMIUM">PREMIUM (já vem com carteira interna)</option>
+        </select>
+      </label>
+
+      <label class="lbl">🔑 Nível da API
+        <select name="nivel_api" required class="input">
+          <option value="BASICA">BÁSICA</option>
+          <option value="AVANCADA">AVANÇADA</option>
+          <option value="COMPLETA">COMPLETA</option>
+          <option value="ILIMITADA">ILIMITADA</option>
+        </select>
+      </label>
+
+      <label class="lbl">💰 Preço (R$)
+        <input name="preco" type="number" step="0.01" required class="input" placeholder="19.99">
+      </label>
+
+      <label class="lbl">📅 Validade
+        <div class="dois-campos">
+          <input name="dias_validade" type="number" required class="input" placeholder="14">
+          <select class="input" disabled><option>dias</option></select>
+        </div>
+      </label>
+
+      <label class="lbl">🏷️ Badge (canto superior)
+        <select name="badge" class="input">
+          <option value="">Nenhum</option>
+          <option>MAIS VENDIDO</option>
+          <option>POPULAR</option>
+          <option>COMPLETO</option>
+          <option>NOVO</option>
+          <option>VIP</option>
+        </select>
+      </label>
+
+      <label class="lbl">🎨 Cor do card
+        <select name="cor" class="input">
+          <option value="roxo">Roxo (padrão)</option>
+          <option value="azul">Azul</option>
+          <option value="verde">Verde</option>
+          <option value="dourado">Dourado</option>
+        </select>
+      </label>
+
+      <label class="lbl full">📝 Descrição longa (aparece no modal)
+        <textarea name="descricao" rows="3" class="input" placeholder="Descreva tudo o que esse produto entrega..."></textarea>
+      </label>
+
+      <label class="lbl">🖼️ URL Banner do produto
+        <input name="banner" class="input" placeholder="https://...">
+      </label>
+
+      <label class="lbl">🖼️ URL Logo / Ícone
+        <input name="logo" class="input" placeholder="https://...">
+      </label>
+
+      <label class="lbl">🔢 Ordem de exibição (1 = primeiro)
+        <input name="ordem" type="number" value="1" class="input">
+      </label>
+
+      <label class="chk-s full">
+        <input type="checkbox" name="tem_carteira_interna" value="1">
+        <strong>💳 Habilitar carteira interna de membros</strong>
+        <span class="muted-peq">· Automático para Intermediário / VIP / Premium</span>
+      </label>
+
+      <button class="btn-principal full">💾 Salvar Produto</button>
+    </form>
+  </div>
+
+  <!-- PRODUTOS JÁ CADASTRADOS -->
+  <h3 class="mt20">Produtos cadastrados (<%= prods.length %>)</h3>
+  <div class="prod-grid">
+    <% prods.forEach(p => { %>
+      <div class="prod-card <%= p.cor %>">
+        <% if(p.badge){ %><div class="prod-badge"><%= p.badge %></div><% } %>
+        <div class="tipo">🤖 <%= p.tipo_bot %> · 🔑 <%= p.nivel_api %></div>
+        <div class="p-nome pequeno"><%= p.nome %></div>
+        <div class="ci-sub"><%= p.dias_validade %> dias de validade</div>
+        <% if(p.tem_carteira_interna){ %><div class="tag verde">💳 Carteira inclusa</div><% } %>
+        <div class="p-preco mt10">R$ <%= p.preco.toFixed(2).replace('.',',') %></div>
+        <a href="/dono/produtos/<%= p.id %>/off" class="btn-sec mt10 full centro-text">Desativar</a>
+      </div>
+    <% }) %>
+  </div>
+</main>
+<%- include('../partials/rodape') %>

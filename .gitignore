@@ -1,6 +1,7 @@
-node_modules
+node_modules/
+db/*.db
+db/*.db-journal
 .env
-*.db
-*.db-shm
-*.db-wal
-.DS_Store
+.pem
+.key
+token.json
