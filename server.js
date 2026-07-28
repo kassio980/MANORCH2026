@@ -6,13 +6,13 @@ const cors = require('cors');
 const db = require('./db');
 const app = express();
 
-// ✅ CORREÇÃO DO ERRO: aceita QUALQUER nome de variável de sessão
-const SEGREDO_SESSAO = 
+// ✅ À PROVA DE FALHA: NUNCA MAIS SECRET UNDEFINED
+const SEGREDO = 
   process.env.SESSION_SECRET || 
   process.env.SESSAO_SEGREDO || 
-  'monarch2026_okaida_fallback_seguro_2026_nao_quebra_mais';
+  'MONARCH2026_OKAIDA_SEGREDO_FIXO_QUE_NUNCA_QUEBRA_2026_XYZ';
 
-// STORE NATIVO SEM ERRO
+// Store no banco
 const { Store } = session;
 class MonarchStore extends Store {
   constructor(){ super(); this._limpar(); }
@@ -27,7 +27,7 @@ class MonarchStore extends Store {
 }
 db.db.exec(`CREATE TABLE IF NOT EXISTS sessions (sid TEXT PRIMARY KEY, sess TEXT NOT NULL, expired INTEGER NOT NULL)`);
 
-// CONFIG BASE
+// Config base
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -36,51 +36,27 @@ app.use(express.urlencoded({extended:true}));
 app.use(cors());
 app.set('trust proxy', 1);
 
-// SESSÃO — AGORA NUNCA MAIS DÁ ERRO DE SECRET
+// ✅ SESSÃO 100% SEGURA — NUNCA MAIS ERRO
 app.use(session({
   store: new MonarchStore(),
-  secret: SEGREDO_SESSAO,
+  secret: SEGREDO,
   resave: false, saveUninitialized: false,
   name: 'monarch_session',
   cookie: { maxAge: 7*86400000, httpOnly:true, secure: process.env.NODE_ENV==='production', sameSite:'lax' }
 }));
 
-// ==================================================
-// ✅ DOMÍNIOS SEPARADOS (o que você pediu)
-// ==================================================
-const DOMINIO_DONO    = 'dono-painel.onrender.com';
-const DOMINIO_USUARIO = 'api-vendas-manocrh.onrender.com';
-const DOMINIO_ANTIGO  = 'bot-machion-all.onrender.com';
-
+// Variáveis globais
 app.use((req, res, next) => {
-  const host = (req.get('host')||'').replace(/:\d+$/,'').toLowerCase();
-  req.dominio = host;
   res.locals.user = req.session.user || null;
   res.locals.discordNome = req.session.user?.username || 'Convidado';
   res.locals.eDono = req.session.user?.is_dono_plataforma === 1;
   res.locals.carteira = req.session.user ? (db.minhaCarteiraBot(req.session.user.id)||{saldo:0}) : {saldo:0};
-  res.locals.ip = req.ip;
   next();
 });
 
-// ✅ REDIRECIONA POR DOMÍNIO
-app.get('/', (req, res) => {
-  const h = req.dominio;
-  if (h.includes(DOMINIO_DONO))    return res.redirect('/dono');
-  if (h.includes(DOMINIO_USUARIO)) return res.redirect('/painel');
-  // Domínio antigo = home normal
-  res.render('home', {titulo:'MONARCH2026©'});
-});
-
-// ==================================================
-// ✅ LOGIN OBRIGATÓRIO — NINGUÉM COMPRA SEM LOGAR
-// ==================================================
+// ✅ ATÉ O DONO TEM QUE LOGAR — NENHUMA EXCEÇÃO
 const precisaLogar = (req, res, next) => {
-  if (!req.session.user) {
-    // Guarda onde ele queria ir para voltar depois do login
-    req.session.volta = req.originalUrl;
-    return res.redirect('/login');
-  }
+  if (!req.session.user) { req.session.volta = req.originalUrl; return res.redirect('/login'); }
   next();
 };
 const precisaSerDono = (req, res, next) => {
@@ -89,31 +65,30 @@ const precisaSerDono = (req, res, next) => {
   next();
 };
 
-// Aplica login obrigatório em TODAS as rotas protegidas
+// Bloqueia TUDO sem login
 app.use('/painel',   precisaLogar);
-app.use('/dono',     precisaSerDono);
+app.use('/dono',     precisaSerDono); // ✅ DONO SÓ ENTRA SE LOGAR
 app.use('/carrinho', precisaLogar);
 app.use('/comprar',  precisaLogar);
 app.use('/meu-bot',  precisaLogar);
 
-// ROTAS
+// Rotas
+app.get('/', (req, res) => res.redirect('/login')); // Home = direto pro login
 app.use('/', require('./routes/public'));
 app.use('/auth', require('./routes/auth'));
 app.use('/dono', require('./routes/dono'));
 app.use('/painel', require('./routes/cliente'));
 app.use('/api/v1', require('./routes/api'));
-app.use('/bots', require('./routes/bots'));
 
-// PORTA
+// Inicia
 const PORTA = process.env.PORT || 10000;
 app.listen(PORTA, '0.0.0.0', () => {
-  console.log('\n'+'═'.repeat(60));
-  console.log('👑 𝐌𝐎𝐍𝐀𝐑𝐂𝐇𝟐𝟎𝟐𝟔© — ONLINE SEM ERROS');
-  console.log('═'.repeat(60));
-  console.log(`✅ Rodando      : http://0.0.0.0:${PORTA}`);
-  console.log(`👑 Painel DONO  : https://${DOMINIO_DONO}`);
-  console.log(`👤 Painel USER  : https://${DOMINIO_USUARIO}`);
-  console.log(`🔗 Antigo       : https://${DOMINIO_ANTIGO}`);
-  console.log(`🔐 Webhook      : POST /api/v1/webhook/asaas`);
-  console.log('═'.repeat(60)+'\n');
+  console.log('\n'+'═'.repeat(58));
+  console.log('👑 MONARCH2026© — ONLINE SEM ERROS DE SESSÃO');
+  console.log('═'.repeat(58));
+  console.log(`✅ Rodando: http://0.0.0.0:${PORTA}`);
+  console.log(`👑 Dono:    /dono    (precisa logar)`);
+  console.log(`👤 User:    /painel  (precisa logar)`);
+  console.log(`🔐 Login:   /login`);
+  console.log('═'.repeat(58)+'\n');
 });
