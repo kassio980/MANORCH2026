@@ -1,24 +1,12 @@
 {
-  "name": "monarch2026",
-  "version": "1.0.0",
-  "description": "𝐌𝐎𝐍𝐀𝐑𝐂𝐇𝟐𝟎𝟐𝟔© — SaaS Completo: API • BOT • STORE • WALLET • VIP • HOSTING",
+  "name": "monarch2026-premium",
+  "version": "2.0.0",
+  "description": "MONARCH2026© SaaS Premium — API • BOT • STORE • WALLET • FINANCE",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js"
-  },
+  "scripts": {"start": "node server.js", "dev": "nodemon server.js"},
   "dependencies": {
-    "express": "^4.19.2",
-    "ejs": "^3.1.10",
-    "express-session": "^1.18.0",
-    "connect-sqlite3": "^0.9.15",
-    "axios": "^1.7.2",
-    "dotenv": "^16.4.5",
-    "better-sqlite3": "^11.1.2",
-    "bcryptjs": "^2.4.3",
-    "cors": "^2.8.5"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.4"
+    "express": "^4.19.2", "ejs": "^3.1.10", "express-session": "^1.18.0",
+    "axios": "^1.7.2", "dotenv": "^16.4.5", "better-sqlite3": "^11.1.2",
+    "bcryptjs": "^2.4.3", "cors": "^2.8.5"
   }
 }

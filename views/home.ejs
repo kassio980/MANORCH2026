@@ -1,10 +1,10 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title><%= titulo %></title>
-<link rel="stylesheet" href="/css/estilo.css"></head><body>
-<header class="topo"><div class="logo">🛡️ 𝐌𝐎𝐍𝐀𝐑𝐂𝐇𝟐𝟎𝟐𝟔©</div>
-<nav><a href="/planos">PLANOS</a><a href="/docs">API</a><a href="/verificar">LICENÇA</a><a href="/status">STATUS</a>
-<% if(user){ %><a href="<%= eDono ? '/dono' : '/painel' %>">MEU PAINEL</a><% } else { %><a href="/login" class="btn">ENTRAR</a><% } %>
-</nav></header>
-<main class="hero"><h1>CRIA · GERENCIA · <span class="destaque">EVOLUI</span></h1>
-<p class="sub">API • BOT • STORE • WALLET • VIP • HOSTING • FINANCE • SECURITY</p>
-<div class="botoes"><a href="/login" class="btn-principal">🔵 ENTRAR COM DISCORD</a><a href="/planos" class="btn-sec">VER PLANOS</a></div>
-</main></body></html>
+<%- include('partials/cabecalho') %>
+<main class="home">
+  <section class="hero">
+    <div class="chip">⚡ VERSÃO PREMIUM 2.0</div>
+    <h1>Plataforma completa para <span class="grad">criar, vender e escalar</span></h1>
+    <p class="sub">API • BOT • STORE • WALLET • VIP • HOSTING • FINANCE • SECURITY</p>
+    <div class="botoes"><a href="/login" class="btn-principal">🔵 Entrar com Discord</a><a href="/docs" class="btn-sec">📚 Documentação</a></div>
+  </section>
+</main>
+<%- include('partials/rodape') %>

@@ -1,15 +1,19 @@
-<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Verificar Licença</title>
-<link rel="stylesheet" href="/css/estilo.css"></head><body class="centro">
-<div class="caixa-login"><div class="logo-g">🛡️ VERIFICAR LICENÇA</div>
-<form method="POST"><input name="id" placeholder="Digite o ID: MNC-XXXXXX" required>
-<button class="btn-principal">🔍 CONSULTAR</button></form>
-<% if(licenca){ %>
-<% if(licenca.invalida){ %><div class="erro">❌ LICENÇA <strong><%= licenca.id %></strong> NÃO EXISTE</div><% } else { %>
-<div class="sucesso">🟢 LICENÇA AUTÊNTICA</div>
-<div class="item">ID: <strong><%= licenca.id %></strong></div>
-<div class="item">Plano: <strong><%= licenca.plano %></strong></div>
-<div class="item">Status: <strong class="verde"><%= licenca.status %></strong></div>
-<div class="item">Expiração: <strong><%= new Date(licenca.validade).toLocaleDateString('pt-BR') %></strong></div>
-<% } %>
-<% } %>
-</div></body></html>
+<%- include('partials/cabecalho') %>
+<main class="conteudo centro-col">
+  <div class="card-premium w500">
+    <h2 class="centro-text">🛡️ Verificar Licença Oficial</h2>
+    <form method="POST" class="gap"><input name="id" placeholder="MNC-XXXXXX" required class="input"><button class="btn-principal cheio">🔍 Consultar</button></form>
+    <% if(licenca){ %>
+      <% if(licenca.invalida){ %>
+        <div class="alerta vermelho mt20">❌ LICENÇA <strong><%= licenca.id %></strong> NÃO EXISTE</div>
+      <% } else { %>
+        <div class="alerta verde mt20">🟢 LICENÇA AUTÊNTICA — MONARCH2026© OFFICIAL</div>
+        <div class="item">ID: <strong><%= licenca.id %></strong></div>
+        <div class="item">Plano: <strong><%= licenca.plano %></strong></div>
+        <div class="item">Status: <strong class="verde"><%= licenca.status %></strong></div>
+        <div class="item">Expiração: <strong><%= new Date(licenca.validade).toLocaleDateString('pt-BR') %></strong></div>
+      <% } %>
+    <% } %>
+  </div>
+</main>
+<%- include('partials/rodape') %>

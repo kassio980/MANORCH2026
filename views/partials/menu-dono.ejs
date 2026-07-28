@@ -1,0 +1,24 @@
+<aside class="menu-lateral" id="menu">
+  <div class="menu-logo">🛡️ 𝐌𝐎𝐍𝐀𝐑𝐂𝐇𝟐𝟎𝟐𝟔©</div>
+  <nav>
+    <a href="/dono" class="menu-item ativo">🏠 Visão Geral</a>
+    <div class="menu-grupo">
+      <div class="menu-toggle" data-g="neg">💼 Negócio <span>▾</span></div>
+      <div class="menu-sub" id="neg"><a href="/dono/clientes">👥 Clientes</a><a href="/dono/planos">📦 Planos</a><a href="/dono/planos">💎 Produtos</a><a href="/dono/planos">🎟️ Cupons</a></div>
+    </div>
+    <div class="menu-grupo">
+      <div class="menu-toggle" data-g="tec">🤖 Tecnologia <span>▾</span></div>
+      <div class="menu-sub" id="tec"><a href="/dono/apis">🔑 APIs</a><a href="/dono/bots">🤖 Bots</a><a href="/dono/licencas">📜 Licenças</a><a href="/dono/hosting">☁️ Hosting</a></div>
+    </div>
+    <div class="menu-grupo">
+      <div class="menu-toggle" data-g="fin">💰 Financeiro <span>▾</span></div>
+      <div class="menu-sub" id="fin"><a href="/dono/saques">💸 Saques</a><a href="/dono/saques">📥 Depósitos</a><a href="/dono/saques">🤝 Transferências</a><a href="/dono/saques">📜 Ledger</a></div>
+    </div>
+    <a href="/dono/seguranca" class="menu-item">🛡️ Segurança</a>
+    <a href="/dono/analytics" class="menu-item">📊 Analytics</a>
+    <a href="/dono/suporte" class="menu-item">🎫 Suporte</a>
+    <a href="/dono/configuracoes" class="menu-item">⚙️ Configurações</a>
+  </nav>
+  <div class="menu-rodape">👤 <%= discordNome %></div>
+</aside>
+<script>document.querySelectorAll('.menu-toggle').forEach(t=>t.onclick=()=>document.getElementById(t.dataset.g).classList.toggle('aberto'));</script>
