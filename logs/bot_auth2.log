@@ -1,0 +1,4 @@
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_auth2.py", line 26
+    'CREATE TABLE IF NOT EXISTS puxados(gid_origem TEXT, gid_destino TEXT, uid TEXT, nick TEXT, data TEXT, PRIMARY KEY(gid_origem,gid_destino,uid))']:
+                                                                                                                                                     ^
+SyntaxError: invalid syntax

@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_ticket.py", line 106, in <module>
+    class VAdmin(View):
+    ...<21 lines>...
+            await it.response.send_message(f'✅ Painel enviado em {ch.mention}\n\n💡 Os tickets serão criados **ABAIXO**, na mesma categoria do painel.', ephemeral=True)
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_ticket.py", line 108, in VAdmin
+    @Button(label='⚙️ CONFIG GERAL', style=ButtonStyle.blurple)
+     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'Button' object is not callable

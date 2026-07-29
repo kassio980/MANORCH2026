@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_gerador.py", line 113, in <module>
+    class VAdmin(View):
+    ...<20 lines>...
+            await it.response.send_message(f'✅ Painel enviado em {ch.mention}', ephemeral=True)
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_gerador.py", line 116, in VAdmin
+    @Button(label='⚙️ CONFIG PAINEL', style=ButtonStyle.blurple)
+     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'Button' object is not callable

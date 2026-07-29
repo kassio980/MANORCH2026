@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_auth2_duplo.py", line 54, in <module>
+    ID_DONO = int(os.getenv('ID_DONO_DISCORD','0'))
+ValueError: invalid literal for int() with base 10: 'PREENCHA_AQUI'

@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_limpeza.py", line 67, in <module>
+    class VLimpeza(View):
+    ...<26 lines>...
+                await it.response.send_message('❌ Não estou em nenhum canal', ephemeral=True)
+  File "/data/data/com.termux/files/home/MONARCH2026/bots/bot_limpeza.py", line 70, in VLimpeza
+    @Button(label='⚙️ CONFIGURAR LIMPEZA', style=ButtonStyle.blurple, row=0)
+     ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'Button' object is not callable

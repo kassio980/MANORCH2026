@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: monarch2026-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    envVars:
+      - key: TOKEN_BOT
+        value: SEU_TOKEN
+      - key: CHAVE_API
+        value: SUA_CHAVE
+      - key: SERVIDOR_PERMITIDO
+        value: "1531365460212322497"
